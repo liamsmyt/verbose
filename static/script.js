@@ -21,6 +21,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Update concreteness values
             document.querySelectorAll('.ms-4')[1].querySelector('p:nth-child(1)').textContent = 'mean = ' + data.mean_conc;
             document.querySelectorAll('.ms-4')[1].querySelector('p:nth-child(2)').textContent = 'average sd = ' + data.sd_conc;
+            // Update concreteness values
+            document.querySelectorAll('.ms-4')[2].querySelector('p:nth-child(1)').textContent = 'mean valence = ' + data.mean_valence;
+            document.querySelectorAll('.ms-4')[2].querySelector('p:nth-child(2)').textContent = 'mean arousal = ' + data.mean_arousal;
+            document.querySelectorAll('.ms-4')[2].querySelector('p:nth-child(3)').textContent = 'mean dominance = ' + data.mean_dominance;
+
         })
         .catch(error => console.error('Error:', error));
     });

@@ -6,8 +6,10 @@ import re
 list1 = []
 total_mean_concreteness = 0
 total_mean_aoa = 0
+total_mean_vad = 0
 count_conc = 0  # Separate counter for concreteness
 count_aoa = 0   # Separate counter for AoA
+count_vad = 0
 
 # Load the AOA DataFrame
 def load_aoa_data(aoa_csv):
@@ -21,12 +23,21 @@ def load_conc_data(conc_csv):
     conc_df['Word'] = conc_df['Word'].astype(str).str.lower()
     return conc_df
 
+
+def load_vad_data(nrc_txt):
+    nrc_df = pd.read_csv(nrc_txt, sep="\t")
+    nrc_df['Word'] = nrc_df['term'].astype(str).str.lower()
+    return nrc_df
+
+
 # Helper function to get column titles
 def getColumns(df):
     if df.columns[1] == 'OccurTotal':
         return {'mean': 'Rating.Mean', 'sd': 'Rating.SD'}
     elif df.columns[1] == 'Bigram':
         return {'mean': 'Conc.M', 'sd': 'Conc.SD'}
+    elif df.columns[0] == 'term':
+        return {'mean': 'valence', 'sd': 'arousal'}
 
 # Function to check if new words
 def newWords(text):
@@ -56,7 +67,7 @@ def newWords(text):
 
 # Adapted function to find only the new values
 def calculate_added_words(new_words, df, metric):
-    global total_mean_concreteness, total_mean_aoa, count_conc, count_aoa
+    global total_mean_concreteness, total_mean_aoa, total_mean_vad, count_conc, count_aoa, count_vad
 
     columns = getColumns(df)
 
@@ -71,6 +82,11 @@ def calculate_added_words(new_words, df, metric):
                 elif metric == "aoa":
                     total_mean_aoa += val_mean
                     count_aoa += 1
+                elif metric == "vad":
+                    total_mean_vad += val_mean
+                    count_vad += 1
+
+
             except (ValueError, TypeError, IndexError):
                 continue
 
@@ -81,12 +97,16 @@ def calculate_added_words(new_words, df, metric):
     elif metric == "aoa":
         if count_aoa > 0:
             return {'mean': total_mean_aoa / count_aoa, 'sd': 63}
+    elif metric == "vad":
+        if count_vad > 0:
+            return {'valence': total_mean_vad / count_vad, 'arousal': total_mean_vad / count_vad, 'dominance': total_mean_vad / count_vad}
+
 
     return {'mean': 0, 'sd': 0}
 
 # Adapted function to find only the new values
 def calculate_removed_words(new_words, df, metric):
-    global total_mean_concreteness, total_mean_aoa, count_conc, count_aoa
+    global total_mean_concreteness, total_mean_aoa, total_mean_vad, count_conc, count_aoa, count_vad
 
     columns = getColumns(df)
 
@@ -101,6 +121,10 @@ def calculate_removed_words(new_words, df, metric):
                 elif metric == "aoa":
                     total_mean_aoa -= val_mean
                     count_aoa -= 1
+                elif metric == "vad":
+                    total_mean_vad -= val_mean
+                    count_vad -= 1
+
             except (ValueError, TypeError, IndexError):
                 continue
 
@@ -111,6 +135,11 @@ def calculate_removed_words(new_words, df, metric):
     elif metric == "aoa":
         if count_aoa > 0:
             return {'mean': total_mean_aoa / count_aoa, 'sd': 63}
+    elif metric == "vad":
+        if count_vad > 0:
+            return {'valence': total_mean_vad / count_vad, 'arousal': total_mean_vad / count_vad, 'dominance': total_mean_vad / count_vad}
+
+
 
     return {'mean': 0, 'sd': 0}
 
