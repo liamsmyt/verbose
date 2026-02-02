@@ -27,8 +27,8 @@ def process():
     if(removed == [] and added == []):
         conc_dict = {"mean": 44, "sd": 63}
     else:
-        calculate_added_words(added, conc_df)  # Process the text
-        conc_dict = calculate_removed_words(removed, conc_df)  # Process the text
+        calculate_added_words(added, conc_df, "conc")  # Process the text
+        conc_dict = calculate_removed_words(removed, conc_df, "conc")  # Process the text
 
 
     mean_aoa = conc_dict['mean']
