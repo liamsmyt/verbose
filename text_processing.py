@@ -2,14 +2,12 @@ import pandas as pd
 from collections import Counter
 import re
 
-# Globals
-
+# Globals - separate counts for each metric
 list1 = []
 total_mean_concreteness = 0
-count = 0
-
-
-
+total_mean_aoa = 0
+count_conc = 0  # Separate counter for concreteness
+count_aoa = 0   # Separate counter for AoA
 
 # Load the AOA DataFrame
 def load_aoa_data(aoa_csv):
@@ -23,20 +21,17 @@ def load_conc_data(conc_csv):
     conc_df['Word'] = conc_df['Word'].astype(str).str.lower()
     return conc_df
 
-
 # Helper function to get column titles
 def getColumns(df):
     if df.columns[1] == 'OccurTotal':
         return {'mean': 'Rating.Mean', 'sd': 'Rating.SD'}
-    elif df.columns[1] == 'Bigram':  # Use 'elif' instead of 'else if'
+    elif df.columns[1] == 'Bigram':
         return {'mean': 'Conc.M', 'sd': 'Conc.SD'}
 
 # Function to check if new words
 def newWords(text):
     global list1
-
     list2 = re.findall(r'\b\w+\b', text.lower())
-
     count1 = Counter(list1)
     count2 = Counter(list2)
 
@@ -57,62 +52,67 @@ def newWords(text):
             added_counts[item] -= 1
 
     list1 = list2.copy()
-
-
     return removed, added
 
-
 # Adapted function to find only the new values
-def calculate_added_words(new_words, df):
-    global total_mean_concreteness
-    global count
+def calculate_added_words(new_words, df, metric):
+    global total_mean_concreteness, total_mean_aoa, count_conc, count_aoa
 
     columns = getColumns(df)
 
     for word in new_words:
-        # Get the row in the DataFrame
         res = df[df['Word'] == word]
-        print("word searched:", word)
         if not res.empty:
             try:
-                #val_sd = float(res[columns['sd']].values[0])
                 val_mean = float(res[columns['mean']].values[0])
-                total_mean_concreteness += val_mean
-                count += 1
-                #total_val_sd += val_sd
+                if metric == "conc":
+                    total_mean_concreteness += val_mean
+                    count_conc += 1
+                elif metric == "aoa":
+                    total_mean_aoa += val_mean
+                    count_aoa += 1
             except (ValueError, TypeError, IndexError):
                 continue
 
-    # Calculate mean if count is greater than 0
-    if count > 0:
-            return {'mean': total_mean_concreteness/count, 'sd': 63}
-    return {'mean': "insufficient input", 'sd': "insufficient input"}
+    # Use the appropriate count and total for this metric
+    if metric == "conc":
+        if count_conc > 0:
+            return {'mean': total_mean_concreteness / count_conc, 'sd': 63}
+    elif metric == "aoa":
+        if count_aoa > 0:
+            return {'mean': total_mean_aoa / count_aoa, 'sd': 63}
 
+    return {'mean': 0, 'sd': 0}
 
 # Adapted function to find only the new values
-def calculate_removed_words(new_words, df):
-    global total_mean_concreteness
-    global count
+def calculate_removed_words(new_words, df, metric):
+    global total_mean_concreteness, total_mean_aoa, count_conc, count_aoa
 
     columns = getColumns(df)
 
     for word in new_words:
-        # Get the row in the DataFrame
         res = df[df['Word'] == word]
-        print("word lookup:", word)
         if not res.empty:
             try:
                 val_mean = float(res[columns['mean']].values[0])
-                total_mean_concreteness -= val_mean
-                count -= 1
-
+                if metric == "conc":
+                    total_mean_concreteness -= val_mean
+                    count_conc -= 1
+                elif metric == "aoa":
+                    total_mean_aoa -= val_mean
+                    count_aoa -= 1
             except (ValueError, TypeError, IndexError):
                 continue
 
-    # Calculate mean if count is greater than 0
-    if count > 0:
-            return {'mean': total_mean_concreteness/count, 'sd': 63}
-    return {'mean': "insufficient input", 'sd': "insufficient input"}
+    # Use the appropriate count and total for this metric
+    if metric == "conc":
+        if count_conc > 0:
+            return {'mean': total_mean_concreteness / count_conc, 'sd': 63}
+    elif metric == "aoa":
+        if count_aoa > 0:
+            return {'mean': total_mean_aoa / count_aoa, 'sd': 63}
+
+    return {'mean': 0, 'sd': 0}
 
 
 

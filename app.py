@@ -12,7 +12,8 @@ aoa_df = load_aoa_data(AOA_CSV)
 CONC_CSV = "datasets/concreteness.csv"
 conc_df = load_conc_data(CONC_CSV)
 
-previousText = "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident"
+aoa_dict = {"mean": 0, "sd": 0}
+conc_dict = {"mean": 0, "sd": 0}
 
 
 @app.route('/')
@@ -21,22 +22,24 @@ def index():
 
 @app.route('/', methods=['POST'])
 def process():
+    global aoa_dict
+    global conc_dict
 
     text_input = request.form['text_input']  # Get the text from the form
     removed, added = newWords(text_input)
-    if(removed == [] and added == []):
-        conc_dict = {"mean": 44, "sd": 63}
-    else:
+    if(not(removed == [] and added == [])):
         calculate_added_words(added, conc_df, "conc")  # Process the text
+        calculate_added_words(added, aoa_df, "aoa")  # Process the text
         conc_dict = calculate_removed_words(removed, conc_df, "conc")  # Process the text
+        aoa_dict = calculate_removed_words(removed, aoa_df, "aoa")  # Process the text
 
 
-    mean_aoa = conc_dict['mean']
-    sd_aoa = conc_dict['sd']
 
-    #conc_dict = calculate_mean(text_input, conc_df)
-    mean_conc = 0
-    sd_conc = 0
+    mean_aoa = aoa_dict['mean']
+    sd_aoa = aoa_dict['sd']
+
+    mean_conc = conc_dict['mean']
+    sd_conc = conc_dict['sd']
 
     return jsonify({
             'mean_aoa': mean_aoa,
