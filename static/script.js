@@ -1,54 +1,10 @@
-// CEFR graded bands
-const vad_data = [
-    { label: 'A1', value2: 0.1998, value3: -0.0996, value4: 0.0334 },
-    { label: 'A2', value2: 0.1750, value3: -0.0701, value4: 0.0366 },
-    { label: 'B1', value2: 0.1756, value3: -0.0611, value4: 0.0713 },
-    { label: 'B2', value2: 0.1599, value3: -0.0441, value4: 0.0905 },
-    { label: 'C1', value2: 0.1446, value3: -0.0474, value4: 0.0989 },
-    { label: 'C2', value2: 0.1307, value3: -0.0531, value4: 0.1101 }
-];
+// ============================================================================
+// CONSTANTS & REFERENCE DATA
+// ============================================================================
 
-const aoa_data = [
-    { label: 'A1', value: 4.7689 },
-    { label: 'A2', value: 5.0443 },
-    { label: 'B1', value: 5.9510 },
-    { label: 'B2', value: 6.4135 },
-    { label: 'C1', value: 6.7891 },
-    { label: 'C2', value: 7.4770 }
-];
+const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 
-const conc_data = [
-    { label: 'A1', value: 3.1878 },
-    { label: 'A2', value: 3.2101 },
-    { label: 'B1', value: 3.2771 },
-    { label: 'B2', value: 3.2745 },
-    { label: 'C1', value: 3.2851 },
-    { label: 'C2', value: 3.2945 }
-];
-
-let currentMetrics = {
-    raw: {
-        mean_aoa: 0,
-        mean_conc: 0,
-        mean_valence: 0,
-        mean_arousal: 0,
-        mean_dominance: 0
-    },
-    classifications: {
-        aoa: 'N/A',
-        concreteness: 'N/A',
-        vad: {
-            valence: 'N/A',
-            arousal: 'N/A',
-            dominance: 'N/A',
-            composite: 'N/A'
-        },
-        overall: 'N/A'
-    }
-};
-
-const cefrColours = {
-    // From beginner (green) to advanced (red/purple)
+const CEFR_COLORS = {
     'A1': '#4CAF50',  // Green - beginner
     'A2': '#8BC34A',  // Light Green
     'B1': '#FFC107',  // Amber - intermediate
@@ -58,211 +14,557 @@ const cefrColours = {
     'N/A': '#9E9E9E'  // Grey - no data
 };
 
-function getCEFRColour(level) {
-    return cefrColours[level] || cefrColours['N/A'];
-}
+const VAD_REFERENCE_DATA = [
+    { label: 'A1', valence: 0.1998, arousal: -0.0996, dominance: 0.0334 },
+    { label: 'A2', valence: 0.1750, arousal: -0.0701, dominance: 0.0366 },
+    { label: 'B1', valence: 0.1756, arousal: -0.0611, dominance: 0.0713 },
+    { label: 'B2', valence: 0.1599, arousal: -0.0441, dominance: 0.0905 },
+    { label: 'C1', valence: 0.1446, arousal: -0.0474, dominance: 0.0989 },
+    { label: 'C2', valence: 0.1307, arousal: -0.0531, dominance: 0.1101 }
+];
 
-/**
- * Classifies a single metric value against CEFR bands
- * @param {number} inputValue - The value to classify
- * @param {Array} referenceData - Array of CEFR reference objects with 'label' and 'value' properties
- * @param {boolean} ascending - Whether higher values indicate higher CEFR levels (default: true)
- * @returns {string} CEFR level (A1-C2)
- */
-function classifySingleMetric(inputValue, referenceData, ascending = true) {
-    if (inputValue === null || inputValue === undefined || isNaN(inputValue)) {
-        return 'N/A';
+const AOA_REFERENCE_DATA = [
+    { label: 'A1', value: 4.7689 },
+    { label: 'A2', value: 5.0443 },
+    { label: 'B1', value: 5.9510 },
+    { label: 'B2', value: 6.4135 },
+    { label: 'C1', value: 6.7891 },
+    { label: 'C2', value: 7.4770 }
+];
+
+const CONC_REFERENCE_DATA = [
+    { label: 'A1', value: 3.1878 },
+    { label: 'A2', value: 3.2101 },
+    { label: 'B1', value: 3.2771 },
+    { label: 'B2', value: 3.2745 },
+    { label: 'C1', value: 3.2851 },
+    { label: 'C2', value: 3.2945 }
+];
+
+// ============================================================================
+// STATE MANAGEMENT
+// ============================================================================
+
+class MetricsState {
+    constructor() {
+        this.raw = {
+            mean_aoa: 0,
+            mean_conc: 0,
+            mean_valence: 0,
+            mean_arousal: 0,
+            mean_dominance: 0
+        };
+        this.classifications = {
+            aoa: 'N/A',
+            concreteness: 'N/A',
+            vad: {
+                valence: 'N/A',
+                arousal: 'N/A',
+                dominance: 'N/A',
+                composite: 'N/A'
+            },
+            overall: 'N/A'
+        };
     }
 
-    // Find the closest CEFR level
-    let closestLevel = referenceData[0].label;
-    console.log(referenceData[0].label)
-    let smallestDiff = Math.abs(inputValue - referenceData[0].value);
+    updateRaw(data) {
+        this.raw = {
+            mean_aoa: data.mean_aoa,
+            mean_conc: data.mean_conc,
+            mean_valence: data.mean_valence,
+            mean_arousal: data.mean_arousal,
+            mean_dominance: data.mean_dominance
+        };
+    }
 
-    for (let i = 1; i < referenceData.length; i++) {
-        const diff = Math.abs(inputValue - referenceData[i].value);
-        if (diff < smallestDiff) {
-            smallestDiff = diff;
-            closestLevel = referenceData[i].label;
+    updateClassifications(classifications) {
+        this.classifications = classifications;
+    }
+
+    getRaw() {
+        return { ...this.raw };
+    }
+
+    getClassifications() {
+        return JSON.parse(JSON.stringify(this.classifications));
+    }
+}
+
+const metricsState = new MetricsState();
+
+// ============================================================================
+// CLASSIFICATION UTILITIES
+// ============================================================================
+
+class CEFRClassifier {
+    /**
+     * Classifies a single metric value against CEFR reference data
+     */
+    static classifySingleMetric(inputValue, referenceData, valueKey = 'value') {
+        if (inputValue === null || inputValue === undefined || isNaN(inputValue)) {
+            return 'N/A';
         }
+
+        let closestLevel = referenceData[0].label;
+        let smallestDiff = Math.abs(inputValue - referenceData[0][valueKey]);
+
+        for (const reference of referenceData) {
+            const diff = Math.abs(inputValue - reference[valueKey]);
+            if (diff < smallestDiff) {
+                smallestDiff = diff;
+                closestLevel = reference.label;
+            }
+        }
+
+        return closestLevel;
     }
 
-    return closestLevel;
+    /**
+     * Classifies VAD (Valence, Arousal, Dominance) metrics
+     */
+    static classifyVAD(valence, arousal, dominance) {
+        const valenceLevel = this.classifySingleMetric(
+            valence,
+            VAD_REFERENCE_DATA,
+            'valence'
+        );
+
+        const arousalLevel = this.classifySingleMetric(
+            arousal,
+            VAD_REFERENCE_DATA,
+            'arousal'
+        );
+
+        const dominanceLevel = this.classifySingleMetric(
+            dominance,
+            VAD_REFERENCE_DATA,
+            'dominance'
+        );
+
+        const composite = this.calculateCompositeLevel([
+            valenceLevel,
+            arousalLevel,
+            dominanceLevel
+        ]);
+
+        return {
+            valence: valenceLevel,
+            arousal: arousalLevel,
+            dominance: dominanceLevel,
+            composite
+        };
+    }
+
+    /**
+     * Classifies all metrics and returns CEFR levels
+     */
+    static classifyAll(metrics) {
+        const vadClassification = this.classifyVAD(
+            metrics.mean_valence,
+            metrics.mean_arousal,
+            metrics.mean_dominance
+        );
+
+        const aoaLevel = this.classifySingleMetric(
+            metrics.mean_aoa,
+            AOA_REFERENCE_DATA
+        );
+
+        const concLevel = this.classifySingleMetric(
+            metrics.mean_conc,
+            CONC_REFERENCE_DATA
+        );
+
+        return {
+            aoa: aoaLevel,
+            concreteness: concLevel,
+            vad: vadClassification,
+            overall: this.calculateCompositeLevel([
+                aoaLevel,
+                concLevel,
+                vadClassification.composite
+            ])
+        };
+    }
+
+    /**
+     * Calculates composite CEFR level from multiple classifications
+     */
+    static calculateCompositeLevel(levels) {
+        const levelToNum = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5, 'C2': 6, 'N/A': 0 };
+        const numToLevel = { 1: 'A1', 2: 'A2', 3: 'B1', 4: 'B2', 5: 'C1', 6: 'C2' };
+
+        const validLevels = levels.filter(level => level !== 'N/A');
+        if (validLevels.length === 0) return 'N/A';
+
+        const avgNum = validLevels.reduce(
+            (sum, level) => sum + levelToNum[level],
+            0
+        ) / validLevels.length;
+
+        return numToLevel[Math.round(avgNum)] || 'N/A';
+    }
 }
 
-/**
- * Classifies VAD (Valence, Arousal, Dominance) metrics against CEFR bands
- * @param {number} valence - Valence value (value2 in vad_data)
- * @param {number} arousal - Arousal value (value3 in vad_data)
- * @param {number} dominance - Dominance value (value4 in vad_data)
- * @returns {Object} Object containing individual classifications and composite level
- */
-function classifyVAD(valence, arousal, dominance) {
-    const valenceLevel = classifySingleMetric(valence,
-        vad_data.map(d => ({ label: d.label, value: d.value2 })), false);
+// ============================================================================
+// 3D GRAPH MANAGEMENT
+// ============================================================================
 
-    const arousalLevel = classifySingleMetric(arousal,
-        vad_data.map(d => ({ label: d.label, value: d.value3 })), true);
+class Graph3DManager {
+    constructor() {
+        this.graph = null;
+        this.rotationInterval = null;
+    }
 
-    const dominanceLevel = classifySingleMetric(dominance,
-        vad_data.map(d => ({ label: d.label, value: d.value4 })), true);
+    /**
+     * Initializes the 3D graph with initial values
+     */
+    initialize(container, valence = 0, arousal = 0, dominance = 0) {
+        const data = this.createDataSet(valence, arousal, dominance);
+        const options = this.getGraphOptions();
 
-    // Calculate composite level (average of the three)
-    const levelToNum = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5, 'C2': 6 };
-    const numToLevel = { 1: 'A1', 2: 'A2', 3: 'B1', 4: 'B2', 5: 'C1', 6: 'C2' };
+        this.graph = new vis.Graph3d(container, data, options);
+        this.startRotation();
+    }
 
-    const avgLevel = Math.round(
-        (levelToNum[valenceLevel] + levelToNum[arousalLevel] + levelToNum[dominanceLevel]) / 3
-    );
-
-    return {
-        valence: valenceLevel,
-        arousal: arousalLevel,
-        dominance: dominanceLevel,
-        composite: numToLevel[avgLevel]
-    };
-}
-
-/**
- * Main classification function - classifies all metrics
- * @param {Object} metrics - Object containing all metric values
- * @returns {Object} CEFR classifications for each metric type
- */
-function classifyCEFR(metrics) {
-    const {
-        mean_aoa,
-        mean_conc,
-        mean_valence,
-        mean_arousal,
-        mean_dominance
-    } = metrics;
-
-    const vadClassification = classifyVAD(mean_valence, mean_arousal, mean_dominance);
-
-    return {
-        aoa: classifySingleMetric(mean_aoa, aoa_data, true),
-        concreteness: classifySingleMetric(mean_conc, conc_data, true),
-        vad: vadClassification,
-        // Overall level based on all metrics (could be weighted differently)
-        overall: getOverallLevel([
-            classifySingleMetric(mean_aoa, aoa_data, true),
-            classifySingleMetric(mean_conc, conc_data, true),
-            vadClassification.composite
-        ])
-    };
-}
-
-
-/**
- * Updates the 3D graph with new VAD values
- */
-function updateGraph(valence, arousal, dominance) {
-    if (window.graph3d && window.graph3d.setData) {
+    /**
+     * Creates a vis.js DataSet with VAD values
+     */
+    createDataSet(valence, arousal, dominance) {
         const data = new vis.DataSet();
-        const list = [
-            [valence, 0, 0],
-            [0, arousal, 0],
-            [0, 0, dominance], [valence, arousal, dominance]
+        const points = [
+            { x: valence, y: 0, z: 0, opacity: 0.5 },
+            { x: 0, y: arousal, z: 0, opacity: 0.5 },
+            { x: 0, y: 0, z: dominance, opacity: 0.5 },
+            { x: valence, y: arousal, z: dominance, opacity: 1.0 }
         ];
 
-        // Add data points with individual colors
-        for (let i = 0; i < list.length; i++) {
+        points.forEach(point => {
             data.add({
-                x: list[i][0],
-                y: list[i][1],
-                z: list[i][2],
-                style: i
+                x: point.x,
+                y: point.y,
+                z: point.z,
+                style: {
+                    fill: '#FF5733',
+                    stroke: '#990000',
+                    strokeWidth: 2,
+                    opacity: point.opacity
+                }
             });
-        }
+        });
 
-        window.graph3d.setData(data);
+        return data;
+    }
+
+    /**
+     * Returns graph configuration options
+     */
+    getGraphOptions() {
+        return {
+            width: '500px',
+            height: '200px',
+            style: 'dot-line',
+            backgroundColor: '#F0F0F0',
+            axisColor: '#AABBCC',
+            showXAxis: true,
+            showYAxis: true,
+            showZAxis: true,
+            showPerspective: true,
+            showGrid: true,
+            showShadow: false,
+            keepAspectRatio: true,
+            verticalRatio: 0.6,
+            dotSizeRatio: 0.02,
+            rotateAxisLabels: true,
+            xLabel: 'Valence',
+            yLabel: 'Arousal',
+            zLabel: 'Dominance',
+            xMin: -1,
+            xMax: 1,
+            yMin: -1,
+            yMax: 1,
+            zMin: -1,
+            zMax: 1,
+            xStep: 0.5,
+            yStep: 0.5,
+            zStep: 0.5
+        };
+    }
+
+    /**
+     * Updates the graph with new VAD values
+     */
+    update(valence, arousal, dominance) {
+        if (!this.graph) return;
+
+        const data = this.createDataSet(valence, arousal, dominance);
+        this.graph.setData(data);
+    }
+
+    /**
+     * Starts the rotation animation
+     */
+    startRotation() {
+        setTimeout(() => {
+            let angle = 1.0;
+
+            this.rotationInterval = setInterval(() => {
+                angle += 0.01;
+                if (angle >= 2 * Math.PI) {
+                    angle = 0;
+                }
+
+                if (this.graph) {
+                    this.graph.setCameraPosition({
+                        horizontal: angle,
+                        vertical: 0.5,
+                        distance: 2
+                    });
+                }
+            }, 100);
+        }, 1000);
+    }
+
+    /**
+     * Stops the rotation animation
+     */
+    stopRotation() {
+        if (this.rotationInterval) {
+            clearInterval(this.rotationInterval);
+            this.rotationInterval = null;
+        }
+    }
+
+    /**
+     * Cleanup method
+     */
+    destroy() {
+        this.stopRotation();
+        this.graph = null;
     }
 }
 
-/**
- * Calculates overall CEFR level from multiple metric classifications
- * @param {Array<string>} levels - Array of CEFR level strings
- * @returns {string} Overall CEFR level
- */
-function getOverallLevel(levels) {
-    const levelToNum = { 'A1': 1, 'A2': 2, 'B1': 3, 'B2': 4, 'C1': 5, 'C2': 6, 'N/A': 0 };
-    const numToLevel = { 1: 'A1', 2: 'A2', 3: 'B1', 4: 'B2', 5: 'C1', 6: 'C2' };
+const graphManager = new Graph3DManager();
 
-    const validLevels = levels.filter(l => l !== 'N/A');
-    if (validLevels.length === 0) return 'N/A';
+// ============================================================================
+// UI UPDATE FUNCTIONS
+// ============================================================================
 
-    const avgNum = validLevels.reduce((sum, level) => sum + levelToNum[level], 0) / validLevels.length;
-    return numToLevel[Math.round(avgNum)];
+class UIUpdater {
+    /**
+     * Updates all UI elements with new metrics data
+     */
+    static updateAll(rawData, classifications) {
+        this.updateAOA(rawData.mean_aoa, classifications.aoa);
+        this.updateConcreteness(rawData.mean_conc, classifications.concreteness);
+        this.updateVAD(rawData, classifications.vad);
+        this.updateGraph(rawData);
+        this.logClassifications(classifications);
+    }
+
+    /**
+     * Updates Age of Acquisition display
+     */
+    static updateAOA(value, level) {
+        const element = document.querySelector('#aoa-value p');
+        if (element) {
+            element.textContent = `${this.formatNumber(value)} (${level})`;
+        }
+    }
+
+    /**
+     * Updates Concreteness display
+     */
+    static updateConcreteness(value, level) {
+        const element = document.querySelector('#conc-value p');
+        if (element) {
+            element.textContent = `${this.formatNumber(value)} (${level})`;
+        }
+    }
+
+    /**
+     * Updates VAD (Valence, Arousal, Dominance) displays
+     */
+    static updateVAD(rawData, vadClassifications) {
+        const elements = document.querySelectorAll('#vad-values p');
+
+        if (elements.length >= 3) {
+            elements[0].textContent = `${this.formatNumber(rawData.mean_valence)} (${vadClassifications.valence})`;
+            elements[1].textContent = `${this.formatNumber(rawData.mean_arousal)} (${vadClassifications.arousal})`;
+            elements[2].textContent = `${this.formatNumber(rawData.mean_dominance)} (${vadClassifications.dominance})`;
+        }
+    }
+
+    /**
+     * Updates the 3D graph
+     */
+    static updateGraph(rawData) {
+        graphManager.update(
+            parseFloat(rawData.mean_valence) || 0,
+            parseFloat(rawData.mean_arousal) || 0,
+            parseFloat(rawData.mean_dominance) || 0
+        );
+    }
+
+    /**
+     * Logs classifications to console
+     */
+    static logClassifications(classifications) {
+        console.log('Overall CEFR Level:', classifications.overall);
+        console.log('All classifications:', classifications);
+    }
+
+    /**
+     * Formats a number for display
+     */
+    static formatNumber(value, decimals = 4) {
+        if (value === null || value === undefined || isNaN(value)) {
+            return 'N/A';
+        }
+        return parseFloat(value).toFixed(decimals);
+    }
 }
 
-// Updated event listener with CEFR classification
-document.addEventListener('DOMContentLoaded', function() {
+// ============================================================================
+// API COMMUNICATION
+// ============================================================================
+
+class MetricsAPI {
+    /**
+     * Fetches metrics from the server
+     */
+    static async fetchMetrics(text) {
+        try {
+            const response = await fetch('/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `text_input=${encodeURIComponent(text)}`
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching metrics:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Processes the fetched data and updates UI
+     */
+    static async processAndUpdate(text) {
+        try {
+            const data = await this.fetchMetrics(text);
+
+            // Update state
+            metricsState.updateRaw(data);
+            const classifications = CEFRClassifier.classifyAll(data);
+            metricsState.updateClassifications(classifications);
+
+            // Update UI
+            UIUpdater.updateAll(data, classifications);
+
+            return { data, classifications };
+        } catch (error) {
+            console.error('Error processing metrics:', error);
+            return null;
+        }
+    }
+}
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Creates a debounced function
+ */
+function debounce(func, delay) {
+    let timeoutId;
+    return function(...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+/**
+ * Gets CEFR color for a given level
+ */
+function getCEFRColor(level) {
+    return CEFR_COLORS[level] || CEFR_COLORS['N/A'];
+}
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
+/**
+ * Initializes the 3D visualization on page load
+ */
+function drawVisualization() {
+    const container = document.getElementById('mygraph');
+    if (!container) {
+        console.error('Graph container not found');
+        return;
+    }
+
+    // Get initial values from the template
+    const mean_valence = parseFloat(window.mean_valence) || 0;
+    const mean_arousal = parseFloat(window.mean_arousal) || 0;
+    const mean_dominance = parseFloat(window.mean_dominance) || 0;
+
+    graphManager.initialize(container, mean_valence, mean_arousal, mean_dominance);
+}
+
+/**
+ * Sets up event listeners
+ */
+function setupEventListeners() {
     const textInput = document.getElementById('text_input');
+    if (!textInput) {
+        console.error('Text input element not found');
+        return;
+    }
 
-    textInput.addEventListener('input', function() {
-        const text = textInput.value;
-
-        fetch('/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: 'text_input=' + encodeURIComponent(text)
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Classify the metrics
-            // Store raw metrics
-                currentMetrics.raw = {
-                    mean_aoa: data.mean_aoa,
-                    mean_conc: data.mean_conc,
-                    mean_valence: data.mean_valence,
-                    mean_arousal: data.mean_arousal,
-                    mean_dominance: data.mean_dominance
-                };
-
-
-            const cefrLevels = classifyCEFR(data);
-
-            currentMetrics.classifications = cefrLevels;
-
-            // Update the displayed results with values and classifications
-            document.querySelector('.ms-4 p:nth-child(1)').textContent =
-                `mean = ${data.mean_aoa} (${cefrLevels.aoa})`;
-
-            document.querySelectorAll('.ms-4')[1].querySelector('p:nth-child(1)').textContent =
-                `mean = ${data.mean_conc} (${cefrLevels.concreteness})`;
-
-            document.querySelectorAll('.ms-4')[2].querySelector('p:nth-child(1)').textContent =
-                `mean valence = ${data.mean_valence} (${cefrLevels.vad.valence})`;
-            document.querySelectorAll('.ms-4')[2].querySelector('p:nth-child(2)').textContent =
-                `mean arousal = ${data.mean_arousal} (${cefrLevels.vad.arousal})`;
-            document.querySelectorAll('.ms-4')[2].querySelector('p:nth-child(3)').textContent =
-                `mean dominance = ${data.mean_dominance} (${cefrLevels.vad.dominance})`;
-
-
-                updateGraph(
-                        parseFloat(data.mean_valence) || 0,
-                        parseFloat(data.mean_arousal) || 0,
-                        parseFloat(data.mean_dominance) || 0
-                    );
-
-
-            // Optionally display overall CEFR lezvel
-            console.log('Overall CEFR Level:', cefrLevels.overall);
-            console.log('All classifications:', cefrLevels);
-        })
-        .catch(error => console.error('Error:', error));
-    });
-});
-
-
-let timeout;
-textInput.addEventListener('input', function() {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-        // Send request here (after 300ms of no typing)
-        const text = textInput.value;
-        // ... rest of fetch code
+    // Debounced input handler (300ms delay)
+    const debouncedHandler = debounce((event) => {
+        const text = event.target.value.trim();
+        if (text) {
+            MetricsAPI.processAndUpdate(text);
+        }
     }, 300);
+
+    textInput.addEventListener('input', debouncedHandler);
+}
+
+/**
+ * Main initialization function
+ */
+function initialize() {
+    drawVisualization();
+    setupEventListeners();
+}
+
+// ============================================================================
+// EVENT LISTENERS
+// ============================================================================
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+} else {
+    initialize();
+}
+
+// Initialize on page load (for graph rendering)
+window.addEventListener('load', drawVisualization);
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    graphManager.destroy();
 });
