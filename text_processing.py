@@ -6,7 +6,9 @@ import re
 list1 = []
 total_mean_concreteness = 0
 total_mean_aoa = 0
-total_mean_vad = 0
+total_mean_valence = 0
+total_mean_arousal = 0
+total_mean_dominance = 0
 count_conc = 0  # Separate counter for concreteness
 count_aoa = 0   # Separate counter for AoA
 count_vad = 0
@@ -37,7 +39,7 @@ def getColumns(df):
     elif df.columns[1] == 'Bigram':
         return {'mean': 'Conc.M', 'sd': 'Conc.SD'}
     elif df.columns[0] == 'term':
-        return {'mean': 'valence', 'sd': 'arousal'}
+        return {'mean_valence': 'valence', 'mean_arousal': 'arousal', 'mean_dominance': 'dominance'}
 
 # Function to check if new words
 def newWords(text):
@@ -67,7 +69,7 @@ def newWords(text):
 
 # Adapted function to find only the new values
 def calculate_added_words(new_words, df, metric):
-    global total_mean_concreteness, total_mean_aoa, total_mean_vad, count_conc, count_aoa, count_vad
+    global total_mean_concreteness, total_mean_aoa, total_mean_valence, total_mean_arousal, total_mean_dominance, count_conc, count_aoa, count_vad
 
     columns = getColumns(df)
 
@@ -75,7 +77,9 @@ def calculate_added_words(new_words, df, metric):
         res = df[df['Word'] == word]
         if not res.empty:
             try:
-                val_mean = float(res[columns['mean']].values[0])
+                if(not metric == "vad"):
+                    val_mean = float(res[columns['mean']].values[0])
+
                 if metric == "conc":
                     total_mean_concreteness += val_mean
                     count_conc += 1
@@ -83,7 +87,12 @@ def calculate_added_words(new_words, df, metric):
                     total_mean_aoa += val_mean
                     count_aoa += 1
                 elif metric == "vad":
-                    total_mean_vad += val_mean
+                    mean_valence = float(res[columns['mean_valence']].values[0])
+                    mean_arousal = float(res[columns['mean_arousal']].values[0])
+                    mean_dominance = float(res[columns['mean_dominance']].values[0])
+                    total_mean_valence += mean_valence
+                    total_mean_arousal += mean_arousal
+                    total_mean_dominance += mean_dominance
                     count_vad += 1
 
 
@@ -91,22 +100,37 @@ def calculate_added_words(new_words, df, metric):
                 continue
 
     # Use the appropriate count and total for this metric
+    # Return appropriate structure based on metric
     if metric == "conc":
         if count_conc > 0:
-            return {'mean': total_mean_concreteness / count_conc, 'sd': 63}
+            return {'mean': round(total_mean_concreteness / count_conc, 6), 'sd': 63}
+        else:
+            return {'mean': 0, 'sd': 0}
     elif metric == "aoa":
         if count_aoa > 0:
-            return {'mean': total_mean_aoa / count_aoa, 'sd': 63}
+            return {'mean': round(total_mean_aoa / count_aoa, 6), 'sd': 63}
+        else:
+            return {'mean': 0, 'sd': 0}
     elif metric == "vad":
         if count_vad > 0:
-            return {'valence': total_mean_vad / count_vad, 'arousal': total_mean_vad / count_vad, 'dominance': total_mean_vad / count_vad}
+            return {
+                'valence': round(total_mean_valence / count_vad, 6),
+                'arousal': round(total_mean_arousal / count_vad, 6),
+                'dominance': round(total_mean_dominance / count_vad, 6)
+            }
+        else:
+            # Reset globals when empty
+            total_mean_valence = 0
+            total_mean_arousal = 0
+            total_mean_dominance = 0
+            return {'valence': 0, 'arousal': 0, 'dominance': 0}
 
-
+    # Fallback (should never reach here with valid metric)
     return {'mean': 0, 'sd': 0}
 
 # Adapted function to find only the new values
 def calculate_removed_words(new_words, df, metric):
-    global total_mean_concreteness, total_mean_aoa, total_mean_vad, count_conc, count_aoa, count_vad
+    global total_mean_concreteness, total_mean_aoa, total_mean_valence, total_mean_arousal, total_mean_dominance, count_conc, count_aoa, count_vad
 
     columns = getColumns(df)
 
@@ -114,7 +138,9 @@ def calculate_removed_words(new_words, df, metric):
         res = df[df['Word'] == word]
         if not res.empty:
             try:
-                val_mean = float(res[columns['mean']].values[0])
+                if(not metric == "vad"):
+                    val_mean = float(res[columns['mean']].values[0])
+
                 if metric == "conc":
                     total_mean_concreteness -= val_mean
                     count_conc -= 1
@@ -122,25 +148,44 @@ def calculate_removed_words(new_words, df, metric):
                     total_mean_aoa -= val_mean
                     count_aoa -= 1
                 elif metric == "vad":
-                    total_mean_vad -= val_mean
+                    mean_valence = float(res[columns['mean_valence']].values[0])
+                    mean_arousal = float(res[columns['mean_arousal']].values[0])
+                    mean_dominance = float(res[columns['mean_dominance']].values[0])
+                    total_mean_valence -= mean_valence
+                    total_mean_arousal -= mean_arousal
+                    total_mean_dominance -= mean_dominance
                     count_vad -= 1
 
             except (ValueError, TypeError, IndexError):
                 continue
 
     # Use the appropriate count and total for this metric
+    # Return appropriate structure based on metric
     if metric == "conc":
         if count_conc > 0:
-            return {'mean': total_mean_concreteness / count_conc, 'sd': 63}
+            return {'mean': round(total_mean_concreteness / count_conc, 6), 'sd': 63}
+        else:
+            return {'mean': 0, 'sd': 0}
     elif metric == "aoa":
         if count_aoa > 0:
-            return {'mean': total_mean_aoa / count_aoa, 'sd': 63}
+            return {'mean': round(total_mean_aoa / count_aoa, 6), 'sd': 63}
+        else:
+            return {'mean': 0, 'sd': 0}
     elif metric == "vad":
         if count_vad > 0:
-            return {'valence': total_mean_vad / count_vad, 'arousal': total_mean_vad / count_vad, 'dominance': total_mean_vad / count_vad}
+            return {
+                'valence': round(total_mean_valence / count_vad, 6),
+                'arousal': round(total_mean_arousal / count_vad, 6),
+                'dominance': round(total_mean_dominance / count_vad, 6)
+            }
+        else:
+            # Reset globals when empty
+            total_mean_valence = 0
+            total_mean_arousal = 0
+            total_mean_dominance = 0
+            return {'valence': 0, 'arousal': 0, 'dominance': 0}
 
-
-
+    # Fallback (should never reach here with valid metric)
     return {'mean': 0, 'sd': 0}
 
 

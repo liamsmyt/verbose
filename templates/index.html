@@ -7,8 +7,96 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+    <link href="https://unpkg.com/vis-graph3d@latest/dist/vis-graph3d.min.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="https://unpkg.com/vis-graph3d@latest/dist/vis-graph3d.min.js"></script>
+
+
+<script type="text/javascript">
+
+    var data = null;
+    var graph3d = null;
+    var mean_valence = parseFloat("{{ mean_valence }}") || 0;
+    var mean_arousal = parseFloat("{{ mean_arousal }}") || 0;
+    var mean_dominance = parseFloat("{{ mean_dominance }}") || 0;
+    list = [[mean_valence, 0, 0], [0, mean_arousal, 0],[0, 0, mean_dominance]]
+
+  // Called when the Visualization API is loaded.
+  function drawVisualization() {
+    console.log("drawVisualization called");
+
+    // Create and populate a data table.
+    var data = new vis.DataSet();
+    for (var i = 0; i < list.length; i++) {
+      data.add({
+        x: list[i][0],
+        y: list[i][1],
+        z: list[i][2],
+        style: i  // Use numeric value instead of object
+      });
+    }
+
+    console.log("Data points added:", data.length);
+
+    // specify options
+    var options = {
+      width:  '300px',
+      height: '300px',
+      style: 'dot-color',
+      showXAxis: true,
+      showYAxis: true,
+      showZAxis: true,
+      showPerspective: true,
+      showGrid: false,
+      showShadow: false,
+      keepAspectRatio: true,
+      verticalRatio: 0.5,
+      dotSizeRatio: 0.01,
+      xLabel: 'valence',
+      yLabel: 'arousal',
+      zLabel: 'dominance',
+      xMin: -1,
+      xMax: 1,
+      yMin: -1,
+      yMax: 1,
+      zMin: -1,
+      zMax: 1,
+      xStep: 0.5,
+      yStep: 0.5,
+      zStep: 0.5
+    };
+
+    // create a graph3d
+    var container = document.getElementById('mygraph');
+    graph3d = new vis.Graph3d(container, data, options);
+
+    // Start rotation after graph renders
+    setTimeout(function() {
+      var angle = 1.0;
+
+      setInterval(function() {
+        angle += 0.005;
+        if (angle >= 0.5){
+          angle = 0;
+        }
+
+        graph3d.setCameraPosition({
+          horizontal: angle,
+          vertical: 0.5,
+          distance: 1.7
+        });
+      }, 50);
+    }, 1000);
+  }
+</script>
+
+
 </head>
-<body class="container mt-5">
+<body onload="drawVisualization();" class="container mt-5">
+
+  <div id="mygraph"></div>
+
+
     <h1 class="text-center">--- Verbose ---</h1>
     <form id="textForm">
         <div class="form-group">
@@ -22,13 +110,11 @@
     <h4 class="mt-4">Kuperman's Age of Acquisition</h1>
     <div class="ms-4">
       <p class="">mean = {{ mean_aoa }}</p>
-      <p class="">average sd = {{ sd_aoa }}</p>
     </div>
 
     <h4 class="mt-4">Concreteness</h4>  <!-- Correct closing tag -->
     <div class="ms-4">
       <p class="">mean = {{ mean_conc }}</p>
-      <p class="">average sd = {{ sd_conc }}</p>
     </div>
 
     <h4 class="mt-4">VAD</h4>  <!-- Correct closing tag -->

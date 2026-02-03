@@ -38,7 +38,6 @@ def process():
         conc_dict = calculate_removed_words(removed, conc_df, "conc")  # Process the text
         aoa_dict = calculate_removed_words(removed, aoa_df, "aoa")  # Process the text
         vad_dict = calculate_removed_words(removed, vad_df, "vad")  # Process the text
-        print("vad:", vad_dict)
 
 
 
