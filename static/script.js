@@ -58,7 +58,7 @@ const cefrColours = {
     'N/A': '#9E9E9E'  // Grey - no data
 };
 
-function getCEFRColor(level) {
+function getCEFRColour(level) {
     return cefrColours[level] || cefrColours['N/A'];
 }
 
@@ -162,11 +162,10 @@ function updateGraph(valence, arousal, dominance) {
         const list = [
             [valence, 0, 0],
             [0, arousal, 0],
-            [0, 0, dominance]
+            [0, 0, dominance], [valence, arousal, dominance]
         ];
 
-
-
+        // Add data points with individual colors
         for (let i = 0; i < list.length; i++) {
             data.add({
                 x: list[i][0],
