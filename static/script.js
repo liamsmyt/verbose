@@ -45,6 +45,7 @@ const CONC_REFERENCE_DATA = [
 // STATE MANAGEMENT
 // ============================================================================
 
+// Object to store state info for all stats
 class MetricsState {
     constructor() {
         this.raw = {
@@ -67,6 +68,7 @@ class MetricsState {
         };
     }
 
+    // setter for all stats
     updateRaw(data) {
         this.raw = {
             mean_aoa: data.mean_aoa,
@@ -77,10 +79,12 @@ class MetricsState {
         };
     }
 
+    // setter function for classification
     updateClassifications(classifications) {
         this.classifications = classifications;
     }
 
+    // helper function to grab raw from the this
     getRaw() {
         return { ...this.raw };
     }
@@ -90,6 +94,7 @@ class MetricsState {
     }
 }
 
+// Initialize metrics state
 const metricsState = new MetricsState();
 
 // ============================================================================
@@ -261,11 +266,11 @@ class Graph3DManager {
      */
     getGraphOptions() {
         return {
-            width: '500px',
-            height: '200px',
+            width: '300px',
+            height: '300px',
             style: 'dot-line',
             backgroundColor: '#F0F0F0',
-            axisColor: '#AABBCC',
+            axisColor: '#020617',
             showXAxis: true,
             showYAxis: true,
             showZAxis: true,
@@ -347,6 +352,286 @@ class Graph3DManager {
 const graphManager = new Graph3DManager();
 
 // ============================================================================
+// AOA GRAPH MANAGEMENT
+// ============================================================================
+
+class AOAGraphManager {
+    constructor() {
+        this.graph = null;
+        this.rotationInterval = null;
+    }
+
+    /**
+     * Initializes the AOA graph with initial value
+     */
+    initialize(container, aoaValue = 0) {
+        const data = this.createDataSet(aoaValue);
+        const options = this.getGraphOptions();
+
+        this.graph = new vis.Graph3d(container, data, options);
+        this.startRotation();
+    }
+
+    /**
+     * Creates a vis.js DataSet with AOA value
+     */
+    createDataSet(aoaValue) {
+        const data = new vis.DataSet();
+        const points = [
+            { x: aoaValue, y: 0, z: 0, opacity: 0.5 },
+            { x: 0, y: aoaValue, z: 0, opacity: 0.5 },
+            { x: 0, y: 0, z: aoaValue, opacity: 0.5 },
+            { x: aoaValue, y: aoaValue, z: aoaValue, opacity: 1.0 }
+        ];
+
+        points.forEach(point => {
+            data.add({
+                x: point.x,
+                y: point.y,
+                z: point.z,
+                style: {
+                    fill: '#4CAF50',
+                    stroke: '#2E7D32',
+                    strokeWidth: 2,
+                    opacity: point.opacity
+                }
+            });
+        });
+
+        return data;
+    }
+
+    /**
+     * Returns graph configuration options
+     */
+    getGraphOptions() {
+        return {
+            width: '300px',
+            height: '300px',
+            style: 'dot-line',
+            backgroundColor: '#F0F0F0',
+            axisColor: '#020617',
+            showXAxis: true,
+            showYAxis: true,
+            showZAxis: true,
+            showPerspective: true,
+            showGrid: true,
+            showShadow: false,
+            keepAspectRatio: true,
+            verticalRatio: 0.6,
+            dotSizeRatio: 0.02,
+            rotateAxisLabels: true,
+            xLabel: 'AOA-X',
+            yLabel: 'AOA-Y',
+            zLabel: 'AOA-Z',
+            xMin: 0,
+            xMax: 10,
+            yMin: 0,
+            yMax: 10,
+            zMin: 0,
+            zMax: 10,
+            xStep: 2,
+            yStep: 2,
+            zStep: 2
+        };
+    }
+
+    /**
+     * Updates the graph with new AOA value
+     */
+    update(aoaValue) {
+        if (!this.graph) return;
+
+        const data = this.createDataSet(aoaValue);
+        this.graph.setData(data);
+    }
+
+    /**
+     * Starts the rotation animation
+     */
+    startRotation() {
+        setTimeout(() => {
+            let angle = 1.0;
+
+            this.rotationInterval = setInterval(() => {
+                angle += 0.01;
+                if (angle >= 2 * Math.PI) {
+                    angle = 0;
+                }
+
+                if (this.graph) {
+                    this.graph.setCameraPosition({
+                        horizontal: angle,
+                        vertical: 0.5,
+                        distance: 2
+                    });
+                }
+            }, 100);
+        }, 1000);
+    }
+
+    /**
+     * Stops the rotation animation
+     */
+    stopRotation() {
+        if (this.rotationInterval) {
+            clearInterval(this.rotationInterval);
+            this.rotationInterval = null;
+        }
+    }
+
+    /**
+     * Cleanup method
+     */
+    destroy() {
+        this.stopRotation();
+        this.graph = null;
+    }
+}
+
+const aoaGraphManager = new AOAGraphManager();
+
+// ============================================================================
+// CONCRETENESS GRAPH MANAGEMENT
+// ============================================================================
+
+class ConcGraphManager {
+    constructor() {
+        this.graph = null;
+        this.rotationInterval = null;
+    }
+
+    /**
+     * Initializes the Concreteness graph with initial value
+     */
+    initialize(container, concValue = 0) {
+        const data = this.createDataSet(concValue);
+        const options = this.getGraphOptions();
+
+        this.graph = new vis.Graph3d(container, data, options);
+        this.startRotation();
+    }
+
+    /**
+     * Creates a vis.js DataSet with Concreteness value
+     */
+    createDataSet(concValue) {
+        const data = new vis.DataSet();
+        const points = [
+            { x: concValue, y: 0, z: 0, opacity: 0.5 },
+            { x: 0, y: concValue, z: 0, opacity: 0.5 },
+            { x: 0, y: 0, z: concValue, opacity: 0.5 },
+            { x: concValue, y: concValue, z: concValue, opacity: 1.0 }
+        ];
+
+        points.forEach(point => {
+            data.add({
+                x: point.x,
+                y: point.y,
+                z: point.z,
+                style: {
+                    fill: '#2196F3',
+                    stroke: '#0D47A1',
+                    strokeWidth: 2,
+                    opacity: point.opacity
+                }
+            });
+        });
+
+        return data;
+    }
+
+    /**
+     * Returns graph configuration options
+     */
+    getGraphOptions() {
+        return {
+            width: '300px',
+            height: '300px',
+            style: 'dot-line',
+            backgroundColor: '#F0F0F0',
+            axisColor: '#020617',
+            showXAxis: true,
+            showYAxis: true,
+            showZAxis: true,
+            showPerspective: true,
+            showGrid: true,
+            showShadow: false,
+            keepAspectRatio: true,
+            verticalRatio: 0.6,
+            dotSizeRatio: 0.02,
+            rotateAxisLabels: true,
+            xLabel: 'Conc-X',
+            yLabel: 'Conc-Y',
+            zLabel: 'Conc-Z',
+            xMin: 0,
+            xMax: 5,
+            yMin: 0,
+            yMax: 5,
+            zMin: 0,
+            zMax: 5,
+            xStep: 1,
+            yStep: 1,
+            zStep: 1
+        };
+    }
+
+    /**
+     * Updates the graph with new Concreteness value
+     */
+    update(concValue) {
+        if (!this.graph) return;
+
+        const data = this.createDataSet(concValue);
+        this.graph.setData(data);
+    }
+
+    /**
+     * Starts the rotation animation
+     */
+    startRotation() {
+        setTimeout(() => {
+            let angle = 1.0;
+
+            this.rotationInterval = setInterval(() => {
+                angle += 0.01;
+                if (angle >= 2 * Math.PI) {
+                    angle = 0;
+                }
+
+                if (this.graph) {
+                    this.graph.setCameraPosition({
+                        horizontal: angle,
+                        vertical: 0.5,
+                        distance: 2
+                    });
+                }
+            }, 100);
+        }, 1000);
+    }
+
+    /**
+     * Stops the rotation animation
+     */
+    stopRotation() {
+        if (this.rotationInterval) {
+            clearInterval(this.rotationInterval);
+            this.rotationInterval = null;
+        }
+    }
+
+    /**
+     * Cleanup method
+     */
+    destroy() {
+        this.stopRotation();
+        this.graph = null;
+    }
+}
+
+const concGraphManager = new ConcGraphManager();
+
+// ============================================================================
 // UI UPDATE FUNCTIONS
 // ============================================================================
 
@@ -403,6 +688,14 @@ class UIUpdater {
             parseFloat(rawData.mean_valence) || 0,
             parseFloat(rawData.mean_arousal) || 0,
             parseFloat(rawData.mean_dominance) || 0
+        );
+
+        aoaGraphManager.update(
+            parseFloat(rawData.mean_aoa) || 0
+        );
+
+        concGraphManager.update(
+            parseFloat(rawData.mean_conc) || 0
         );
     }
 
@@ -519,6 +812,20 @@ function drawVisualization() {
     const mean_dominance = parseFloat(window.mean_dominance) || 0;
 
     graphManager.initialize(container, mean_valence, mean_arousal, mean_dominance);
+
+    // Initialize AOA graph
+    const aoaContainer = document.getElementById('aoagraph');
+    if (aoaContainer) {
+        const mean_aoa = parseFloat(window.mean_aoa) || 0;
+        aoaGraphManager.initialize(aoaContainer, mean_aoa);
+    }
+
+    // Initialize Concreteness graph
+    const concContainer = document.getElementById('concgraph');
+    if (concContainer) {
+        const mean_conc = parseFloat(window.mean_conc) || 0;
+        concGraphManager.initialize(concContainer, mean_conc);
+    }
 }
 
 /**
@@ -567,4 +874,6 @@ window.addEventListener('load', drawVisualization);
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
     graphManager.destroy();
+    aoaGraphManager.destroy();
+    concGraphManager.destroy();
 });

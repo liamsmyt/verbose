@@ -26,28 +26,22 @@
         // Create and populate a data table.
         var data = new vis.DataSet();
         for (var i = 0; i < list.length; i++) {
-                let opacity = (i < 3) ? 0.5 : 1;  // 50% opacity for non-composite values, full opacity for composite
                 data.add({
                     x: list[i][0],
                     y: list[i][1],
                     z: list[i][2],
-                    style: {
-                        "fill": "#FF5733",
-                        "stroke": "#990000",
-                        "strokeWidth": 2,
-                        "opacity": opacity // Set opacity here
-                    }
+                    style: i
                 });
             }
 
 
         // specify options
         var options = {
-            width: '500px',  // Increased width for better visibility
+            width: '200px',  // Increased width for better visibility
             height: '200px', // Increased height for better visibility
             style: 'dot-line',
             backgroundColor: '#F0F0F0', // Softer background color
-            axisColor: '#AABBCC',
+            axisColor: '#020617',
             showXAxis: true,
             showYAxis: true,
             showZAxis: true,
@@ -77,23 +71,7 @@
         var container = document.getElementById('mygraph');
         graph3d = new vis.Graph3d(container, data, options);
 
-        // Start rotation after graph renders
-        setTimeout(function() {
-            var angle = 1.0;
 
-            setInterval(function() {
-                angle += 0.01; // Slower rotation for ease of viewing
-                if (angle >= 0.5) {
-                    angle = 0;
-                }
-
-                graph3d.setCameraPosition({
-                    horizontal: angle,
-                    vertical: 0.5,
-                    distance: 2 // Increased distance for better view
-                });
-            }, 100);
-        }, 1000);
     }
 </script>
 
@@ -104,29 +82,29 @@
   <div class="container mt-5 bg-slate-700">
 
 
-    <p class="text-center text-[#ba5f67] text-3xl font-bold">--- Verbose ---</p>
+    <h1 class="text-center red display-1 fw-bold bg-blacklight border-4 align-items-center my-auto border-slate-900 p-4 rounded-md w-fit mx-auto">Verbose</h1>
     <form id="textForm">
         <div class="form-group">
-            <label for="text_input">Enter your text:</label>
-            <textarea class="form-control bg-slate-900" id="text_input" name="text_input" rows="10" placeholder="Enter your text here..." required></textarea>
+            <label for="text_input" class="text-slate-300 font-2xl">Enter your text:</label>
+            <textarea class="form-control bg-slate-900" id="text_input" name="text_input" rows="4" placeholder="Enter your text here..." required></textarea>
         </div>
     </form>
 
-    <div id="aoa-card" class="col-md-12 bg-[#24282f] p-2 mt-4 rounded-md">
+    <div id="aoa-card" class="col-md-12 bg-sage p-4 mt-4 rounded-md">
       <div class="row px-2">
         <div id="aoa-label" class="col-md-3 bg-gray-400 mx-2 d-flex align-items-center justify-content-center">
-  <h4 class="display-6 font-semibold mb-0">
+  <h4 class="display-6 font-bold mb-0">
     Kuperman's Age of Acquisition
   </h4>
 </div>
         <div id="aoa-value" class="col-md-3 bg-gray-300 d-flex justify-content-center align-items-center">
-          <p class="ms-4 display-6 mb-0">{{ mean_aoa }}</p>
+          <p class="ms-4 display-6 mb-0 fw-bold">{{ mean_aoa }}</p>
         </div>
-
+        <div id="aoagraph" class="col-md-5 mx-auto"></div>
       </div>
     </div>
 
-    <div id="conc-card" class="col-md-12 bg-[#24282f] p-2 mt-4 rounded-md">
+    <div id="conc-card" class="col-md-12 p-4 bg-blue mt-4 rounded-md">
       <div class="row px-2">
         <div id="conc-label" class="col-md-3 bg-gray-400 mx-2 d-flex align-items-center justify-content-center">
   <h4 class="display-6 font-semibold mb-0">
@@ -134,23 +112,24 @@
   </h4>
 </div>
         <div id="conc-value" class="col-md-3 bg-gray-300 d-flex justify-content-center align-items-center">
-          <p class="ms-4 display-6 mb-0">{{ mean_conc }}</p>
+          <p class="ms-4 display-6 mb-0 fw-bold">{{ mean_conc }}</p>
         </div>
-
+        <div id="concgraph" class="col-md-5 mx-auto"></div>
       </div>
     </div>
 
-    <div id="vad-card" class="col-md-12 bg-[#24282f] p-2 mt-4 rounded-md">
+    <div id="vad-card" class="col-md-12 p-2 bg-orange mt-4 rounded-md">
       <div class="row px-2">
-        <div id="vad-title" class="col-md-3 bg-gray-400 mx-2 text-center">
-          <p class="ms-4 display-6 mb-0">Valence:</p>
-          <p class="ms-4 display-6 mb-0">Arousal:</p>
-          <p class="ms-4 display-6 mb-0">Dominance:</p>
+        <div id="vad-title" class="col-md-3 bg-gray-400 text-center p-3 ">
+  <p class="display-6 mb-0 text-center">Valence:</p>
+  <p class="display-6 mb-0">Arousal:</p>
+  <p class="display-6 mb-0">Dominance:</p>
 </div>
-<div id="vad-values" class="col-md-3 bg-gray-300">
-    <p class="ms-4 display-6 mb-0">{{ mean_valence }}</p>
-    <p class="ms-4 display-6 mb-0">{{ mean_arousal }}</p>
-    <p class="ms-4 display-6 mb-0">{{ mean_dominance }}</p>
+
+<div id="vad-values" class="col-md-3 bg-gray-300 ms-2">
+    <p class="display-6 mb-0 text-center fw-bold">{{ mean_valence }}</p>
+    <p class="display-6 mb-0 text-center fw-bold">{{ mean_arousal }}</p>
+    <p class="display-6 mb-0 text-center fw-bold">{{ mean_dominance }}</p>
 </div>
         <div id="mygraph" class="col-md-5 mx-auto"></div>
       </div>
